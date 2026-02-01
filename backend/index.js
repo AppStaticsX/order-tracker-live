@@ -20,10 +20,8 @@ const io = new Server(server, {
 
 // Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/live_order_tracker';
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB Connected'))
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Connected'))
   .catch(err => console.log('MongoDB Connection Error:', err));
 
 // Test Route to create an order ID
