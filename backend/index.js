@@ -79,7 +79,7 @@ io.on('connection', (socket) => {
   socket.on('update_location', async (data) => {
     const { orderId, latitude, longitude, heading } = data;
 
-    console.log(`Received update for Order ${orderId}`);
+    console.log(`Received update for Order ${orderId}, MongoDB state: ${mongoose.connection.readyState}`);
 
     // Persist to Database FIRST
     try {
@@ -102,8 +102,14 @@ io.on('connection', (socket) => {
               }
             }
           }, { new: true });
+
+          if (updatedOrder) {
+            console.log(`✓ Successfully saved to DB for order ${orderId}`);
+          } else {
+            console.log(`✗ Order ${orderId} not found in database. Create it first via POST /api/orders`);
+          }
         } else {
-          console.log("Invalid MongoDB ObjectId provided, skipping DB save for demo orderId.");
+          console.log(`✗ Invalid MongoDB ObjectId: ${orderId}`);
         }
 
         // Broadcast the SAVED data (or the incoming data if save failed/skipped)
@@ -114,10 +120,26 @@ io.on('connection', (socket) => {
           db_saved: !!updatedOrder
         });
 
-        console.log(`Broadcasted and Saved: ${latitude}, ${longitude}`);
+        console.log(`Broadcasted: ${latitude}, ${longitude}, DB Saved: ${!!updatedOrder}`);
+      } else {
+        console.log(`✗ MongoDB not connected. Connection state: ${mongoose.connection.readyState}`);
+        // Still broadcast even if DB is down
+        io.to(orderId).emit('driver_location_updated', {
+          latitude,
+          longitude,
+          heading,
+          db_saved: false
+        });
       }
     } catch (err) {
-      console.error("Failed to update location in DB", err);
+      console.error("Failed to update location in DB:", err.message);
+      // Still broadcast even if there's an error
+      io.to(orderId).emit('driver_location_updated', {
+        latitude,
+        longitude,
+        heading,
+        db_saved: false
+      });
     }
   });
 
